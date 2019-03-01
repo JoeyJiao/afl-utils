@@ -384,7 +384,7 @@ Use '@@' to specify crash sample input file position (see afl-fuzz usage).")
         if not args.serial_number:
             print_err("No serial number is provided for adb")
             return
-        adb.run(args.serial_number, "shell su root 'chmod -R a+x " + sync_dir + "'")
+        adb.run(args.serial_number, "shell su root 'chmod -R a+rx " + sync_dir + "'")
         adb.run(args.serial_number, "pull " + sync_dir)
         sync_dir = sync_dir.split("/")[-1]
     else:

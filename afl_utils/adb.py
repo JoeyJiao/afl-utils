@@ -1,5 +1,6 @@
 import sys
 import subprocess
+from afl_utils.AflPrettyPrint import print_err
 
 def run(serial_number, cmds):
     cmd = ['adb', '-s', serial_number] + cmds.split(" ")
