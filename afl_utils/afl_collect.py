@@ -21,13 +21,13 @@ import queue
 import shutil
 import sys
 import threading
-import subprocess
 
 import afl_utils
 from afl_utils import SampleIndex, AflThread
 from afl_utils.AflPrettyPrint import clr, print_ok, print_err, print_warn
 from db_connectors import con_sqlite
 import datetime
+from afl_utils import adb
 
 # afl-collect global settings
 global_crash_subdirs = "crashes"
@@ -48,13 +48,6 @@ gdb_binary = shutil.which("gdb")
 db_table_spec = """`Sample` TEXT PRIMARY KEY NOT NULL, `Classification` TEXT NOT NULL,
 `Classification_Description` TEXT NOT NULL, `Hash` TEXT, `Timestamp` DATETIME NOT NULL, `User_Comment` TEXT"""
 
-
-def run_adb(serial_number, cmds):
-    cmd = ['adb', '-s', serial_number] + cmds.split(" ")
-    ret = subprocess.call(' '.join(cmd), shell=True)
-    if ret != 0:
-        print_err("adb command failed to run: %s!" % " ".join(cmd))
-        sys.exit(1)
 
 def check_gdb():
     if gdb_binary is None:
@@ -379,9 +372,9 @@ phase. Samples that cause the target to run longer are marked as timeouts and ar
 effect without '-r'.")
     parser.add_argument("target_cmd", nargs="+", help="Path to the target binary and its command line arguments. \
 Use '@@' to specify crash sample input file position (see afl-fuzz usage).")
-    parser.add_argument("-t", "--target", dest="target_device", default=None,
+    parser.add_argument("-td", "--target", dest="target_device", default=None,
                         help="Target device type, default host, can be adb which stands for Android.")
-    parser.add_argument("-s", "--serial-no", dest="serial_number", default=None,
+    parser.add_argument("-sn", "--serial-no", dest="serial_number", default=None,
                         help="Serial number if target device is adb.")
 
     args = parser.parse_args(argv[1:])
@@ -391,8 +384,8 @@ Use '@@' to specify crash sample input file position (see afl-fuzz usage).")
         if not args.serial_number:
             print_err("No serial number is provided for adb")
             return
-        run_adb(args.serial_number, "shell su root 'chmod -R a+x " + sync_dir + "'")
-        run_adb(args.serial_number, "pull " + sync_dir)
+        adb.run(args.serial_number, "shell su root 'chmod -R a+x " + sync_dir + "'")
+        adb.run(args.serial_number, "pull " + sync_dir)
         sync_dir = sync_dir.split("/")[-1]
     else:
         if not os.path.exists(sync_dir):
@@ -406,7 +399,7 @@ Use '@@' to specify crash sample input file position (see afl-fuzz usage).")
     args.target_cmd = " ".join(args.target_cmd).split()
     args.target_cmd[0] = os.path.abspath(os.path.expanduser(args.target_cmd[0]))
     if args.target_device:
-        run_adb(args.serial_number, "ls " + args.target_cmd[0])
+        adb.run(args.serial_number, "ls " + args.target_cmd[0])
     else:
         if not os.path.exists(args.target_cmd[0]):
             print_err("Target binary not found!")
